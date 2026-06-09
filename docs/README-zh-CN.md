@@ -78,7 +78,7 @@ DrawAnywhere 是一个可以让你在屏幕任意地方上绘图的安卓软件�
 ## 💌 感谢
 [Akshay Sharma](https://github.com/akshay2211) 的 [DrawBox](https://github.com/akshay2211/DrawBox) 作为灵感来源，<br>
 [480 Design](https://www.figma.com/@480design) 和 [R4IN80W](https://www.figma.com/@voidrainbow) 的 [Solar Icons Set](https://www.figma.com/community/file/1166831539721848736/solar-icons-set) 提供的漂亮得惊人的软件图标（[CC BY 4.0](../SVG%20Icon/LICENSE.md)），<br>
-以及 [Mauro Banze](https://stackoverflow.com/a/66958772) 和 [Yannick](https://stackoverflow.com/a/65760080) 的 Stack Overflow 回答（[CC BY-SA 4.0](../app/src/main/java/com/shezik/drawanywhere/ToolbarLifecycleOwner.kt)）！
+以及 [Mauro Banze](https://stackoverflow.com/a/66958772) 和 [Yannick](https://stackoverflow.com/a/65760080) 的 Stack Overflow 回答（[CC BY-SA 4.0](../app/src/main/java/com/shezik/drawanywhere/view/ToolbarLifecycleOwner.kt)）！
 
 最后，感谢[您](https://play.google.com/store/apps/details?id=com.kts.draw)把自己的软件变成订阅制付费模式！你是我最初的动力！[^1]
 

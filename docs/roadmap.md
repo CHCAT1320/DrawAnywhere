@@ -47,7 +47,6 @@
 ### 交互
 - [x] 手指绘制时也显示 hover 圆圈（手指离开后 300ms 延迟，再 200ms 淡出；笔直接淡出，200ms）
 - [ ] 缩略图 / minimap（无限画布的全局导航小窗）
-- [ ] 关闭手指绘制时触摸透传，笔正常绘画 —— 可能需 Accessibility Service；定时探测方案可选，大部分平板有 hover
 - [ ] remap 手势
 - [ ] 笔按键环形菜单（中央橡皮 + 外圈功能扇区）
 - [ ] 有些 stylus 的按键无法触发橡皮
@@ -67,44 +66,28 @@
 
 ---
 
-## 自动透传触摸 — 初步方案
+## 自动透传触摸 — 探索记录
 
-### 问题
+需求：关闭手指绘制时，若笔未靠近屏幕，手指触摸透传给下方应用，笔事件仍由画布接收。
 
-需求：关闭手指绘制时，若笔不在屏幕上（未 hover），手指触摸应当穿透覆盖层传递给下方应用。
+### 已尝试方案
 
-核心矛盾：`FLAG_NOT_TOUCHABLE` 是窗口级标志，启用后覆盖层**完全不再接收任何事件**——包括笔的 hover（`ACTION_HOVER_MOVE`）。这意味着一旦透传，就无法检测笔靠近来恢复触摸接收。
+1. **Classic（FLAG_NOT_TOUCHABLE）** — 已实现（三指双击切换）。全有或全无：透传时笔和手指一起透传，无法绘画。简单可靠。
 
-### 方案对比
+2. **定时探测（probing）** — 尝试后放弃。每 300ms 短暂移除 FLAG_NOT_TOUCHABLE 嗅探笔靠近，其余时间保持透传。
+   - Android 12+ 强制将 FLAG_NOT_TOUCHABLE 的 overlay 窗口变半透明，导致频繁闪烁 —— **致命 UX 缺陷**。
+   - 探测窗口内可能吃掉用户手指点击。
 
-#### A. 双窗口（一静一动）
+3. **Shizuku + injectInputEvent(targetUid)** — 尝试后放弃。
+   - `targetUid` 不绕过 Z-order，注入事件仍先到 overlay → UID 不匹配被丢弃。
+   - 临时 FLAG_NOT_TOUCHABLE + 注入产生 CANCEL 冲突，前台收不到完整手势。
+   - `app_process` 冷启动延迟不可控。
 
-笔事件窗口永远接收事件。手指触摸窗口随 `fingerDrawingEnabled` + hover 状态切换 `FLAG_NOT_TOUCHABLE`。
+4. **AccessibilityService dispatchGesture** — 未实现。
+   - 只能做预录制 gesture，不支持实时连续触控。
+   - 多点手势限制（不能加减手指）。
+   - tap 类短手势可用，scroll/pinch 不可用。
 
-- 优点：笔事件通道永不中断
-- 缺点：两窗口同步复杂（坐标、生命周期），z-order 需保证笔窗口在上
+### 结论
 
-#### B. Hover 触发 + 定时探测
-
-默认透传。每 ~300ms 短暂移除 `FLAG_NOT_TOUCHABLE`（1 帧），若有 hover 则保持接收，否则恢复透传。
-
-- 优点：单窗口，实现简单
-- 缺点：探测间隙最多 300ms 延迟；频繁 flag 切换可能导致视觉闪烁；**探测期间窗口恢复接收触摸，会打断下方应用的手势操作（如滑动、长按）——非常烦**
-
-#### C. 事件重放（保持接收，转发手指）
-
-永远接收所有事件。手指事件在 `onTouchEvent` 中判断：若手指绘制关闭且无笔 hover → 通过 `Instrumentation.sendPointerSync()` 或 `AccessibilityService` 将事件重新注入系统，传递给下方应用。
-
-- 优点：笔事件通道永不中断，无 flag 切换闪烁
-- 缺点：需 `INJECT_EVENTS` 权限（系统应用级别）或开启无障碍服务（用户手动授权，体验差）
-
-#### D. AccessibilityService 代理
-
-覆盖层注册无障碍服务，始终接收事件。手指事件通过 `AccessibilityService.onAccessibilityEvent` + `GestureDescription` 转发。
-
-- 优点：不需要系统权限
-- 缺点：无障碍服务有性能开销，用户需手动在设置中开启，"辅助功能"提示不雅观
-
-### 推荐：方案 B（默认）+ 方案 D（可选）
-
-方案 B 零权限、对大部分支持 hover 的设备够用。方案 D 作为高级选项，覆盖无 hover 设备。
+Android 输入管线按 Z-order 派发事件，不支持按 tool type（笔/手指）分流。所有"选择性透传"方案最终都受限于窗口模型本身。Classic 方案（三指双击手动切换 FLAG_NOT_TOUCHABLE）是唯一零缺陷的实现。
